@@ -40,4 +40,4 @@ Masz dwie możliwości:
 `python manage.py runserver`
 przykladowy komit
 przykladowy push
-
+# BEZPIECZENSTWO
