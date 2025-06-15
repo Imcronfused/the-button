@@ -58,6 +58,20 @@ jobs:
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
           timeout: '5m'
+      - name: Run Trivy vulnerability scanner (JSON report)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'the-button:${{ github.sha }}'
+          format: 'json'
+          output: 'trivy-results.json'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      - name: Upload Trivy scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.json
       - name: Test Docker image
         run: |
           docker run --name test-container -d -p 8000:8000 the-button:${{ github.sha }}
@@ -80,4 +94,8 @@ jobs:
           # Użyj tylko skróconego SHA jako tagu
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           # Taguj obraz
+          docker tag the-button:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/the-button:${SHORT_SHA}
+          docker tag the-button:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/the-button:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/the-button:${SHORT_SHA}
+          docker push ${{ secrets.DOCKER_USERNAME }}/the-button:latest
 
