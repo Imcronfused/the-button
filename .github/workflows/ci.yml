@@ -1,16 +1,3 @@
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-  workflow_dispatch:
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -48,9 +35,19 @@ jobs:
           push: false
           tags: the-button:${{ github.sha }}
           load: true
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'the-button:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          timeout: '5m'
       - name: Test Docker image
         run: |
           docker run --name test-container -d -p 8000:8000 the-button:${{ github.sha }}
+          # Próbujemy połączyć się z aplikacją 10 razy, co sekundę
           for i in {1..10}; do
             if curl -s http://localhost:8000/ | grep -q "Ping"; then
               echo "Application available!"
@@ -60,15 +57,13 @@ jobs:
               echo "Application test timed out"
               exit 1
             fi
-            echo "Retry $i – Waiting 1 sec..."
+            echo "Retry $i - Waiting 1 sec..."
             sleep 1
           done
       - name: Tag and push Docker image
         if: github.event_name != 'pull_request'
         run: |
+          # Użyj tylko skróconego SHA jako tagu
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          docker tag the-button:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/the-button:${SHORT_SHA}
-          docker tag the-button:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/the-button:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/the-button:${SHORT_SHA}
-          docker push ${{ secrets.DOCKER_USERNAME }}/the-button:latest
+          # Taguj obraz
 
